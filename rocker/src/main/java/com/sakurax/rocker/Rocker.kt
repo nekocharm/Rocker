@@ -124,7 +124,6 @@ class Rocker @JvmOverloads constructor(
 
         isFocusable = true//能否获得焦点
         isFocusableInTouchMode = true//能否通过触摸获得焦点
-        keepScreenOn = true//保持屏幕长亮
         setZOrderOnTop(true)//设置位于顶端
 
     }
