@@ -9,8 +9,6 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.MotionEvent
-import android.view.SurfaceHolder
-import android.view.SurfaceView
 import android.view.View
 import kotlin.math.*
 
@@ -20,15 +18,8 @@ class Rocker @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ):
-    SurfaceView(context, attrs, defStyleAttr), SurfaceHolder.Callback,Runnable{
+    View(context, attrs, defStyleAttr){
 
-    // 控制SurfaceView的大小，格式
-    // 可以监控或者改变SurfaceView
-    private lateinit var mHolder: SurfaceHolder
-    //画布
-    private var mCanvas: Canvas? = null
-    //子线程标志位,控制子线程
-    private var mIsDrawing: Boolean = false
     //画笔
     private lateinit var mPaint: Paint
     //位置
@@ -47,20 +38,13 @@ class Rocker @JvmOverloads constructor(
     private var mAreaRadius = -1
     private var mRockerRadius = -1
 
-    //线程
-    private lateinit var mDrawThread: Thread
-
-    var onHandleListener: ((x: Float, y: Float) -> Unit)? = null
+    private var onHandleListener: ((x: Float, y: Float) -> Unit)? = null
 
     init{
 
         initPaint()
         initAttrs(context, attrs)
-        initSurfaceView()
-        initSurfaceHolder()
-
     }
-
 
     //初始化画笔
     private fun initPaint(){
@@ -117,23 +101,6 @@ class Rocker @JvmOverloads constructor(
                 mRockerColor = Color.CYAN
             }
         }
-    }
-
-    //初始化图象函数
-    private fun initSurfaceView(){
-
-        isFocusable = true//能否获得焦点
-        isFocusableInTouchMode = true//能否通过触摸获得焦点
-        setZOrderOnTop(true)//设置位于顶端
-
-    }
-
-    private fun initSurfaceHolder(){
-
-        mHolder = holder//得到SurfaceHolder对象
-        mHolder.addCallback(this)//注册SurfaceHolder
-        mHolder.setFormat(PixelFormat.TRANSLUCENT)//背景透明
-
     }
 
     private fun getDistance(x1: Int, y1: Int, x2: Int, y2: Int):Int {
@@ -222,6 +189,7 @@ class Rocker @JvmOverloads constructor(
         val mX:Float=(mRockerPosition.x.toFloat()-mAreaRadius-mRockerRadius)/mAreaRadius
         val mY:Float=-(mRockerPosition.y.toFloat()-mAreaRadius-mRockerRadius)/mAreaRadius
         onHandleListener?.let { it(mX, mY) }
+        invalidate()
         return true
     }
 
@@ -248,7 +216,6 @@ class Rocker @JvmOverloads constructor(
         setMeasuredDimension(measureWidth, measureHeight)
     }
 
-
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
 
@@ -261,51 +228,17 @@ class Rocker @JvmOverloads constructor(
             mRockerRadius = (tempRadius.toFloat()*0.25).toInt()
     }
 
-    override fun surfaceCreated(holder: SurfaceHolder) {
-        mIsDrawing = true
-        mDrawThread = Thread(this)
-        mDrawThread.start()
-    }
-
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-
-    }
-
-    override fun surfaceDestroyed(holder: SurfaceHolder?) {
-        mIsDrawing = false
-
-    }
-
-    override fun run() {
-        while (mIsDrawing){
-            try {
-                mCanvas = mHolder.lockCanvas()//获取当前画布
-                mCanvas?.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)//绘制透明色（清屏）
-                drawArea(mCanvas!!)
-                drawRocker(mCanvas!!)
-                Thread.sleep(10)
-
-            }catch (e: Exception) {
-                e.printStackTrace()
-            }finally {
-                if (mCanvas != null){
-                    mHolder.unlockCanvasAndPost(mCanvas)
-                }
-            }
-        }
-    }
-
     override fun onDraw(canvas: Canvas){
+        super.onDraw(canvas)
         if (isInEditMode) {
             canvas.drawColor(Color.WHITE)
+        }
+        try {
             drawArea(canvas)
             drawRocker(canvas)
+        }catch (e: Exception) {
+            e.printStackTrace()
         }
-    }
-
-    override fun onVisibilityChanged(changedView: View, visibility: Int) {
-        super.onVisibilityChanged(changedView, visibility)
-        mIsDrawing = visibility==VISIBLE
     }
 
 
